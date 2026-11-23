@@ -1,8 +1,10 @@
-# Your real app code, games and data come from the PythonAnywhere export and stay on your PC.
-app/
+# Data and keys never go in git.
 export/
 *.tar.gz
 *.db
 secret.py
 .flask_session_key
 __pycache__/
+# Game builds are large and come from the PythonAnywhere export (they live on the server volume).
+app/minecraft_game/
+app/fps_test/
