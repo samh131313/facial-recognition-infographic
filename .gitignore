@@ -1,0 +1,8 @@
+# Your real app code, games and data come from the PythonAnywhere export and stay on your PC.
+app/
+export/
+*.tar.gz
+*.db
+secret.py
+.flask_session_key
+__pycache__/

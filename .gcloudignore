@@ -1,0 +1,9 @@
+# Uploaded to Cloud Build by `gcloud run deploy --source .`
+# (This file exists so gcloud does NOT fall back to .gitignore, which hides app/.)
+.git
+.gitignore
+*.tar.gz
+export/
+app/secret.py
+app/__pycache__/
+**/__pycache__/
