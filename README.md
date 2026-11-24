@@ -79,6 +79,23 @@ straight onto the server volume.
 
 ---
 
+## Backup address on Cloud Run (`*.run.app`)
+
+`mirror/` is a tiny nginx service for Google Cloud Run. It forwards every request and WebSocket
+to the Appliku site, so if `applikuapp.com` is ever blocked you can use `https://liquidity-mirror-….run.app`.
+All data stays on the Hetzner server. It costs pennies, because it only runs while forwarding.
+
+1. Install the Google Cloud SDK, run `gcloud auth login`, and create a project with billing.
+2. Run this from the repo folder:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File mirror\deploy-mirror.ps1 -ProjectId YOUR-PROJECT -Target liquidity.applikuapp.com
+   ```
+3. In Appliku, add the printed secret as the environment variable `LIQ_PROXY_SECRET`, then redeploy.
+   Without it, the site password form and games refuse the mirror's address.
+
+Limits through the mirror: WebSockets reconnect every 60 minutes, single uploads over 32 MB fail,
+and you sign in separately on each address (cookies are per address).
+
 ## Changing API keys
 
 In Appliku, open the app's **Environment variables** and add `LIQ_SECRET_<NAME>`, e.g.
@@ -96,7 +113,8 @@ Every deploy copies them over the volume's copy.
 - `Dockerfile`: Python 3.12 plus your requirements
 - `appliku/start.sh`: runs `prepare.py`, then uvicorn on port 8000
 - `appliku/prepare.py`: first-time import, code install and `secret.py` build
-- `appliku/asgi_entry.py`: HTTPS-aware wrapper around `flask_app:multiplayer_asgi`
+- `appliku/asgi_entry.py`: HTTPS-aware wrapper around `flask_app:multiplayer_asgi` (also trusts the mirror's host when `LIQ_PROXY_SECRET` matches)
+- `mirror/`: Cloud Run backup address (nginx forwarder plus `deploy-mirror.ps1`)
 - `scripts/export_from_pythonanywhere.sh`: run on PythonAnywhere
 - `scripts/server_import.sh`: run on the Hetzner server
 
