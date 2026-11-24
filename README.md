@@ -96,6 +96,19 @@ All data stays on the Hetzner server. It costs pennies, because it only runs whi
 Limits through the mirror: WebSockets reconnect every 60 minutes, single uploads over 32 MB fail,
 and you sign in separately on each address (cookies are per address).
 
+## Backup address on Azure (`*.azurewebsites.net`)
+
+`azure-mirror/` is a tiny Node.js forwarder for Azure App Service (free F1 plan works). It forwards
+every request and WebSocket to the Appliku site. All data stays on the Hetzner server.
+
+1. Sign up for **Azure for Students** (college email, no card), then open **Cloud Shell** (`>_` icon, choose Bash) in portal.azure.com.
+2. Run:
+   ```bash
+   git clone -b claude/pythonanywhwre-chromebook-migration-yo2dk7 --depth 1 https://github.com/samh131313/facial-recognition-infographic liq
+   bash liq/azure-mirror/deploy.sh liquidity.applikuapp.com
+   ```
+3. Put the printed secret in Appliku as `LIQ_PROXY_SECRET`, then click Deploy Now. (Use the same secret for every mirror: pass it as the 2nd argument.)
+
 ## Changing API keys
 
 In Appliku, open the app's **Environment variables** and add `LIQ_SECRET_<NAME>`, e.g.
@@ -114,6 +127,7 @@ Every deploy copies them over the volume's copy.
 - `appliku/start.sh`: runs `prepare.py`, then uvicorn on port 8000
 - `appliku/prepare.py`: first-time import, code install and `secret.py` build
 - `appliku/asgi_entry.py`: HTTPS-aware wrapper around `flask_app:multiplayer_asgi` (also trusts the mirror's host when `LIQ_PROXY_SECRET` matches)
+- `azure-mirror/`: Azure App Service backup address (Node forwarder plus `deploy.sh` for Cloud Shell)
 - `mirror/`: Cloud Run backup address (nginx forwarder plus `deploy-mirror.ps1`)
 - `scripts/export_from_pythonanywhere.sh`: run on PythonAnywhere
 - `scripts/server_import.sh`: run on the Hetzner server
