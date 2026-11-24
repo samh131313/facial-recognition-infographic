@@ -43,7 +43,10 @@ fi
 echo "==> Server settings"
 P=$SRV/server.properties
 setprop() { if grep -q "^$1=" "$P"; then sed -i "s|^$1=.*|$1=$2|" "$P"; else echo "$1=$2" >> "$P"; fi; }
-setprop server-ip 127.0.0.1
+# Listen address: 127.0.0.1 by default. If the server already uses another private address
+# (e.g. the Docker "applications" gateway 10.99.1.1 so Appliku's nginx container can reach it), keep it.
+CUR_IP=$(grep -E '^server-ip=' "$P" | cut -d= -f2 || true)
+setprop server-ip "${MC_BIND:-${CUR_IP:-127.0.0.1}}"
 setprop server-port 25565
 setprop online-mode false
 setprop motd 'Liquidity SMP'
@@ -57,7 +60,7 @@ echo "==> Background service (starts on boot, restarts if it crashes)"
 cat > /etc/systemd/system/minecraft.service <<UNIT
 [Unit]
 Description=Liquidity Eaglercraft server (Paper 1.12.2 + EaglerXServer)
-After=network-online.target
+After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
