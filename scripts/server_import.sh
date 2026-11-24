@@ -6,12 +6,19 @@
 set -euo pipefail
 FILE=${1:-/root/liquidity-export.tar.gz}
 [ -f "$FILE" ] || { echo "Not found: $FILE"; exit 1; }
-C=""
+# Prefer the web container (Appliku also runs a "one_off" helper from the same image).
+C=""; FALLBACK=""
 for id in $(docker ps -q); do
   if docker inspect -f '{{range .Mounts}}{{.Destination}} {{end}}' "$id" | tr ' ' '\n' | grep -qx /data; then
-    C=$id; break
+    name=$(docker inspect -f '{{.Name}}' "$id")
+    case "$name" in
+      *one_off*) [ -n "$FALLBACK" ] || FALLBACK=$id ;;
+      *web*) C=$id; break ;;
+      *) [ -n "$FALLBACK" ] || FALLBACK=$id ;;
+    esac
   fi
 done
+[ -n "$C" ] || C=$FALLBACK
 [ -n "$C" ] || { echo "No running container with a /data volume. Check the app is deployed and its volume target is /data."; exit 1; }
 echo "Copying into container $(docker inspect -f '{{.Name}}' "$C") ..."
 docker cp "$FILE" "$C":/data/liquidity-export.tar.gz.part
