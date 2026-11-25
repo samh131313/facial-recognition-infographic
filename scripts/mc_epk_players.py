@@ -47,12 +47,12 @@ def read_epk(path):
         if tag == b'END$': break
         n = body[q]; q += 1; name = body[q:q + n].decode('utf-8'); q += n
         ln = struct.unpack('>i', body[q:q + 4])[0]; q += 4
-        if tag == b'FILE':
-            crc = struct.unpack('>I', body[q:q + 4])[0]; q += 4
-            data = body[q:q + ln]; q += ln
-            # (Eaglercraft's checksum isn't plain CRC32; the ':' / '>' framing below still verifies structure)
-            if body[q:q + 1] != b':': sys.exit('Bad EPK record after ' + name)
-            q += 1
+        if tag == b'FILE':                      # length covers: crc(4) + data + ':'
+            crc = struct.unpack('>I', body[q:q + 4])[0]
+            data = body[q + 4:q + ln - 1]
+            if body[q + ln - 1:q + ln] != b':': sys.exit('Bad EPK record after ' + name)
+            if zlib.crc32(data) & 0xffffffff != crc: print('warning: checksum mismatch in', name)
+            q += ln
             files[name] = data
         else:
             q += ln                              # HEAD records: metadata
