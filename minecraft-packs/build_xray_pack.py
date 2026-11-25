@@ -31,12 +31,55 @@ SHOW = {  # model name -> texture
     'mob_spawner_cage': 'mob_spawner',
 }
 
+# Item icons: hidden blocks would otherwise also vanish from the inventory/hotbar, because
+# item models inherit the block model. Item names taken from this game build.
+ITEMS = {  # item model -> block model it normally uses
+    'andesite': 'andesite',
+    'andesite_smooth': 'andesite_smooth',
+    'chiseled_red_sandstone': 'red_sandstone_chiseled',
+    'chiseled_sandstone': 'sandstone_chiseled',
+    'clay': 'clay',
+    'coarse_dirt': 'coarse_dirt',
+    'cobblestone': 'cobblestone',
+    'cobblestone_monster_egg': 'cobblestone',
+    'diorite': 'diorite',
+    'diorite_smooth': 'diorite_smooth',
+    'dirt': 'dirt',
+    'end_stone': 'end_stone',
+    'granite': 'granite',
+    'granite_smooth': 'granite_smooth',
+    'grass': 'grass_normal',
+    'gravel': 'gravel',
+    'hardened_clay': 'hardened_clay',
+    'mycelium': 'mycelium',
+    'netherrack': 'netherrack',
+    'podzol': 'podzol',
+    'red_sand': 'red_sand',
+    'red_sandstone': 'red_sandstone_normal',
+    'sand': 'sand',
+    'sandstone': 'sandstone_normal',
+    'smooth_red_sandstone': 'red_sandstone_smooth',
+    'smooth_sandstone': 'sandstone_smooth',
+    'soul_sand': 'soul_sand',
+    'stone': 'stone',
+    'stone_monster_egg': 'stone',
+}
+ITEM_TEX_OVERRIDE = {'grass_normal': 'grass_side', 'mycelium': 'mycelium_side'}  # nicer icon than the particle texture
+
 def hidden(tex):
-    # A single zero-size element: valid for the model loader, but nothing to draw.
-    # Eaglercraft's loader needs EITHER "parent" OR non-empty "elements" (never both, never []).
-    return {"textures": {"particle": "blocks/" + tex, "x": "blocks/" + tex},
-            "elements": [{"from": [8, 8, 8], "to": [8, 8, 8],
-                          "faces": {"up": {"uv": [0, 0, 0, 0], "texture": "#x"}}}]}
+    # Full cube drawn with a see-through texture that only has a thin border.
+    # cube_all keeps "cullface", so faces touching other solid blocks are skipped and
+    # only faces exposed to air (cave walls, floors, ceilings) show their outline.
+    # Parent-only model: Eaglercraft rejects models with both "parent" and "elements".
+    return {"parent": "block/cube_all",
+            "textures": {"all": "blocks/liquidity_xray_outline", "particle": "blocks/" + tex}}
+
+
+def outline_png():
+    im = Image.new('RGBA', (16, 16), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 15, 15], outline=(205, 205, 205, 255))
+    b = io.BytesIO(); im.save(b, 'PNG'); return b.getvalue()
+
 
 # Same hand-held/third-person placement as vanilla 1.8 block/block (no parent allowed with elements)
 DISPLAY = {"thirdperson": {"rotation": [10, -45, 170], "translation": [0, 1.5, -2.75],
@@ -58,10 +101,15 @@ def icon():
 
 with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED) as z:
     z.writestr('pack.mcmeta', json.dumps({"pack": {"pack_format": 1,
-        "description": "Liquidity X-Ray: ores visible, filler hidden"}}, indent=1))
+        "description": "Liquidity X-Ray: ores visible, cave outlines"}}, indent=1))
     z.writestr('pack.png', icon())
+    z.writestr('assets/minecraft/textures/blocks/liquidity_xray_outline.png', outline_png())
     for name, tex in HIDE.items():
         z.writestr('assets/minecraft/models/block/%s.json' % name, json.dumps(hidden(tex)))
+    for item, blk in ITEMS.items():
+        tex = ITEM_TEX_OVERRIDE.get(blk, HIDE[blk])
+        z.writestr('assets/minecraft/models/item/%s.json' % item,
+                   json.dumps({"parent": "block/cube_all", "textures": {"all": "blocks/" + tex}}))
     for name, tex in SHOW.items():
         z.writestr('assets/minecraft/models/block/%s.json' % name, json.dumps(visible(tex)))
-print('built', OUT, len(HIDE), 'hidden,', len(SHOW), 'highlighted')
+print('built', OUT, len(HIDE), 'hidden,', len(SHOW), 'highlighted,', len(ITEMS), 'item icons kept')
