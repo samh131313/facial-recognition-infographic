@@ -86,8 +86,10 @@ def hidden_classic(tex):
 
 
 def outline_png():
-    im = Image.new('RGBA', (16, 16), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    d.rectangle([0, 0, 15, 15], outline=(205, 205, 205, 255))
+    # 64x64 with a 1-pixel border -> lines are 1/64 of a block wide (a 16x16 texture made them
+    # 4x thicker, which filled the screen in narrow tunnels). Dim grey so it stays subtle.
+    im = Image.new('RGBA', (64, 64), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 63, 63], outline=(150, 150, 150, 255))
     b = io.BytesIO(); im.save(b, 'PNG'); return b.getvalue()
 
 
