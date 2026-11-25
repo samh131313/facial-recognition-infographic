@@ -20,6 +20,7 @@ HIDE = {  # model name -> particle texture (keeps break particles sensible)
     'sandstone_chiseled': 'sandstone_carved',
     'red_sandstone_normal': 'red_sandstone_normal', 'red_sandstone_smooth': 'red_sandstone_smooth',
     'red_sandstone_chiseled': 'red_sandstone_carved',
+    'cobblestone': 'cobblestone',  # mossy_cobblestone stays visible (dungeons)
     'netherrack': 'netherrack', 'end_stone': 'end_stone', 'soul_sand': 'soul_sand',
     'clay': 'clay', 'hardened_clay': 'hardened_clay',
 }

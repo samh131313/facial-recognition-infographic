@@ -28,6 +28,12 @@ def minecraft_pack_file(name):
 '''
 
 # HTML for the page: no single quotes or backslashes (it is inserted into a single-quoted literal).
+OLD_NOTE = ('Changes apply the next time the game starts. If the game is open, '
+            'choose Save and Quit to Title, then launch it again. Turning it off restores your previous brightness.')
+NEW_NOTE = ('Stays on: it is re-applied every time you open this page, even if the '
+            'Brightness slider reset it. If the game is open, choose Save and Quit to Title and reload this page. '
+            'Turning it off restores your previous brightness.')
+
 CARD = (
     '<section class="card" id="packsCard"><h2>Resource packs</h2>'
     '<p class="muted" style="margin-top:0">Optional extras. Only players who turn them on get them. '
@@ -38,8 +44,9 @@ CARD = (
     '<div style="flex:1"><strong>Liquidity Fullbright</strong> <span id="fbStatus" class="muted"></span>'
     '<div class="muted">See in caves and at night without torches or potion effects.</div>'
     '<button id="fbToggle" style="margin-top:8px">Turn on</button>'
-    '<div class="muted" style="margin-top:6px">Changes apply the next time the game starts. If the game is open, '
-    'choose Save and Quit to Title, then launch it again. Turning it off restores your previous brightness.</div></div></div>'
+    '<div class="muted" style="margin-top:6px">Stays on: it is re-applied every time you open this page, even if the '
+    'Brightness slider reset it. If the game is open, choose Save and Quit to Title and reload this page. '
+    'Turning it off restores your previous brightness.</div></div></div>'
     '<div style="display:flex;gap:12px;align-items:flex-start;padding:10px;margin:10px 0;'
     'background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:8px">'
     '<img src="/minecraft/packs/xray.png" width="64" height="64" alt="" style="image-rendering:pixelated;flex:none">'
@@ -56,7 +63,7 @@ CARD = (
 )
 
 # Launcher JS: no double quotes or backslashes (it is inserted into a double-quoted literal).
-FB_JS = (
+FB_JS_V1 = (
     "const fbKey=(()=>{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);"
     "if(/^_eaglercraft[^.]*[.]g$/.test(k))return k;}return '_eaglercraftX.g';})();"
     "const fbNL=String.fromCharCode(10);"
@@ -79,6 +86,34 @@ FB_JS = (
     "fbShow();"
 )
 
+FB_JS = (
+    "const fbKey=(()=>{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);"
+    "if(/^_eaglercraft[^.]*[.]g$/.test(k))return k;}return '_eaglercraftX.g';})();"
+    "const fbNL=String.fromCharCode(10);"
+    "async function fbRead(){const v=localStorage.getItem(fbKey);if(!v)return null;"
+    "const bytes=Uint8Array.from(atob(v),c=>c.charCodeAt(0));"
+    "return await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();}"
+    "async function fbWrite(t){const gz=new Uint8Array(await new Response(new Blob([t]).stream()"
+    ".pipeThrough(new CompressionStream('gzip'))).arrayBuffer());let s='';for(const c of gz)s+=String.fromCharCode(c);"
+    "localStorage.setItem(fbKey,btoa(s));}"
+    "function fbGamma(t){const m=t.match(/^gamma:(.*)$/m);return m?parseFloat(m[1]):1;}"
+    "function fbSet(t,v){return /^gamma:/m.test(t)?t.replace(/^gamma:.*$/m,'gamma:'+v):t+fbNL+'gamma:'+v;}"
+    "const fbWant=()=>localStorage.getItem('liquidity.fullbright.want')==='1';"
+    "async function fbApply(){const t=await fbRead();if(!t)return;const g=fbGamma(t);"
+    "if(localStorage.getItem('liquidity.fullbright.want')===null&&g>1.5)localStorage.setItem('liquidity.fullbright.want','1');"
+    "if(fbWant()&&g<=1.5){localStorage.setItem('liquidity.fullbright.prev',String(g));await fbWrite(fbSet(t,'10.0'));}}"
+    "function fbShow(){const on=fbWant();$('fbToggle').textContent=on?'Turn off':'Turn on';"
+    "$('fbStatus').textContent=on?'(on)':'(off)';}"
+    "$('fbToggle').onclick=async()=>{try{const t=await fbRead();"
+    "if(!t){$('fbStatus').textContent='(launch the game once, open Options and press Done, then try again)';return;}"
+    "if(fbWant()){localStorage.setItem('liquidity.fullbright.want','0');"
+    "await fbWrite(fbSet(t,localStorage.getItem('liquidity.fullbright.prev')||'1.0'));}"
+    "else{localStorage.setItem('liquidity.fullbright.want','1');const g=fbGamma(t);"
+    "if(g<=1.5)localStorage.setItem('liquidity.fullbright.prev',String(g));await fbWrite(fbSet(t,'10.0'));}"
+    "fbShow();}catch(e){$('fbStatus').textContent='(could not change it: '+e+')';}};"
+    "fbApply().catch(()=>{}).finally(fbShow);"
+)
+
 
 def main():
     s = open(APP, encoding='utf-8').read()
@@ -93,6 +128,11 @@ def main():
         if s.count(marker) != 1:
             sys.exit('page marker not found; nothing changed')
         s = s.replace(marker, CARD + marker)
+    launcher_line = s.split('MINECRAFT_LAUNCHER = ', 1)[1].split('\n', 1)[0]
+    if FB_JS_V1 in launcher_line:                      # upgrade the first version in place
+        s = s.replace(FB_JS_V1, FB_JS)
+    if OLD_NOTE in s:
+        s = s.replace(OLD_NOTE, NEW_NOTE)
     if 'fbToggle' not in s.split('MINECRAFT_LAUNCHER = ', 1)[1].split('\n', 1)[0]:
         lmark = "$('relayValue').value=relay;\\n"
         if s.count(lmark) != 1:
@@ -104,7 +144,7 @@ def main():
     open(APP + '.tmp', 'w', encoding='utf-8').write(s)
     py_compile.compile(APP + '.tmp', doraise=True)
     shutil.move(APP + '.tmp', APP)
-    print('added: /minecraft/packs route, Resource packs card, Fullbright toggle')
+    print('updated: /minecraft/packs route, Resource packs card, Fullbright (remembers your choice)')
 
 
 if __name__ == '__main__':
