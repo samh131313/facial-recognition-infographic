@@ -5,7 +5,9 @@ game's own textures, plus a generated icon.  Usage: python3 build_xray_pack.py [
 import io, json, sys, zipfile
 from PIL import Image, ImageDraw
 
-OUT = sys.argv[1] if len(sys.argv) > 1 else 'Liquidity-XRay.zip'
+OUT = sys.argv[1] if len(sys.argv) > 1 else 'Liquidity-XRay-Outlines.zip'
+MODE = sys.argv[2] if len(sys.argv) > 2 else 'outlines'   # 'outlines' or 'classic'
+assert MODE in ('outlines', 'classic')
 
 # Model names checked against this game build's own blockstates (EaglercraftX 1.9.4-u35):
 # e.g. stone randomly uses 'stone' OR 'stone_mirrored', so both must be hidden.
@@ -75,6 +77,14 @@ def hidden(tex):
             "textures": {"all": "blocks/liquidity_xray_outline", "particle": "blocks/" + tex}}
 
 
+def hidden_classic(tex):
+    # Classic look: fully invisible. A single zero-size element (valid for Eaglercraft's loader,
+    # which needs EITHER "parent" OR non-empty "elements"), so nothing is drawn.
+    return {"textures": {"particle": "blocks/" + tex, "x": "blocks/" + tex},
+            "elements": [{"from": [8, 8, 8], "to": [8, 8, 8],
+                          "faces": {"up": {"uv": [0, 0, 0, 0], "texture": "#x"}}}]}
+
+
 def outline_png():
     im = Image.new('RGBA', (16, 16), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     d.rectangle([0, 0, 15, 15], outline=(205, 205, 205, 255))
@@ -93,23 +103,30 @@ def visible(tex):
                           "faces": {f: dict(face) for f in ("down", "up", "north", "south", "west", "east")}}]}
 
 def icon():
-    im = Image.new('RGBA', (64, 64), (20, 20, 26, 255)); d = ImageDraw.Draw(im)
+    im = Image.new('RGBA', (64, 64), (20, 20, 26, 255) if MODE == 'outlines' else (52, 22, 70, 255))
+    d = ImageDraw.Draw(im)
+    if MODE == 'outlines':  # wireframe grid + ores
+        for k in range(0, 64, 16):
+            d.line([(k, 0), (k, 63)], fill=(150, 150, 150, 255)); d.line([(0, k), (63, k)], fill=(150, 150, 150, 255))
     for (x, y, c) in [(10, 12, (90, 220, 255)), (36, 30, (60, 200, 90)), (16, 40, (230, 190, 60)), (40, 8, (220, 60, 60))]:
         d.rectangle([x, y, x + 13, y + 13], fill=c + (255,), outline=(255, 255, 255, 255))
-    d.text((4, 52), "X-RAY", fill=(255, 255, 255, 255))
+    d.rectangle([0, 50, 63, 63], fill=(0, 0, 0, 200))
+    d.text((3, 51), "OUTLINE" if MODE == 'outlines' else "CLASSIC", fill=(255, 255, 255, 255))
     b = io.BytesIO(); im.save(b, 'PNG'); return b.getvalue()
+
 
 with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED) as z:
     z.writestr('pack.mcmeta', json.dumps({"pack": {"pack_format": 1,
-        "description": "Liquidity X-Ray: ores visible, cave outlines"}}, indent=1))
+        "description": ("X-Ray Outlines: cave walls outlined, ores visible" if MODE == "outlines" else "X-Ray Classic: filler invisible, no outlines")}}, indent=1))
     z.writestr('pack.png', icon())
-    z.writestr('assets/minecraft/textures/blocks/liquidity_xray_outline.png', outline_png())
+    if MODE == 'outlines':
+        z.writestr('assets/minecraft/textures/blocks/liquidity_xray_outline.png', outline_png())
     for name, tex in HIDE.items():
-        z.writestr('assets/minecraft/models/block/%s.json' % name, json.dumps(hidden(tex)))
+        z.writestr('assets/minecraft/models/block/%s.json' % name, json.dumps(hidden(tex) if MODE == 'outlines' else hidden_classic(tex)))
     for item, blk in ITEMS.items():
         tex = ITEM_TEX_OVERRIDE.get(blk, HIDE[blk])
         z.writestr('assets/minecraft/models/item/%s.json' % item,
                    json.dumps({"parent": "block/cube_all", "textures": {"all": "blocks/" + tex}}))
     for name, tex in SHOW.items():
         z.writestr('assets/minecraft/models/block/%s.json' % name, json.dumps(visible(tex)))
-print('built', OUT, len(HIDE), 'hidden,', len(SHOW), 'highlighted,', len(ITEMS), 'item icons kept')
+print('built', OUT, MODE, len(HIDE), 'hidden,', len(SHOW), 'highlighted,', len(ITEMS), 'item icons kept')

@@ -15,17 +15,20 @@ import sys
 SITE = sys.argv[1] if len(sys.argv) > 1 else '/data/mysite'
 APP = SITE + '/flask_app.py'
 
-ROUTE = '''@app.get('/minecraft/packs/<path:name>')
+PACK_FILES = ('Liquidity-XRay-Outlines.zip', 'Liquidity-XRay-Outlines.png',
+              'Liquidity-XRay-Classic.zip', 'Liquidity-XRay-Classic.png', 'fullbright.png')
+
+ROUTE = ('''@app.get('/minecraft/packs/<path:name>')
 def minecraft_pack_file(name):
     from pathlib import Path
     from flask import send_from_directory, abort
-    if name not in ('Liquidity-XRay.zip', 'xray.png', 'fullbright.png'):
+    if name not in __PACK_FILES__:
         abort(404)
     root = Path(__file__).resolve().parent / 'minecraft_game' / 'packs'
     return send_from_directory(root, name, as_attachment=name.endswith('.zip'), max_age=3600)
 
 
-'''
+''').replace('__PACK_FILES__', repr(PACK_FILES))
 
 # HTML for the page: no single quotes or backslashes (it is inserted into a single-quoted literal).
 OLD_NOTE = ('Changes apply the next time the game starts. If the game is open, '
@@ -49,17 +52,25 @@ CARD = (
     'Turning it off restores your previous brightness.</div></div></div>'
     '<div style="display:flex;gap:12px;align-items:flex-start;padding:10px;margin:10px 0;'
     'background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:8px">'
-    '<img src="/minecraft/packs/xray.png" width="64" height="64" alt="" style="image-rendering:pixelated;flex:none">'
-    '<div style="flex:1"><strong>Liquidity X-Ray</strong>'
-    '<div class="muted">Hides stone, dirt, sand, gravel and netherrack so ores, spawners and caves stand out. '
-    'Works best with Fullbright on.</div>'
-    '<a class="button" href="/minecraft/packs/Liquidity-XRay.zip" download style="display:inline-block;margin-top:8px">Download pack</a>'
-    '<ol style="margin-top:8px"><li>Download the pack above (keep the .zip file, do not unzip it).</li>'
-    '<li>In the game: <strong>Options… → Resource Packs… → Open resource pack</strong> and choose '
-    '<strong>Liquidity-XRay.zip</strong>.</li>'
-    '<li>Click the pack under <em>Available Resource Packs</em>, then <strong>Select this resource pack</strong>.</li>'
-    '<li>Press <strong>Done</strong>. To turn it off, click it under <em>Selected Resource Packs</em> again.</li></ol>'
-    '</div></div></section>'
+    '<img src="/minecraft/packs/Liquidity-XRay-Outlines.png" width="64" height="64" alt="" style="image-rendering:pixelated;flex:none">'
+    '<div style="flex:1"><strong>X-Ray Outlines</strong>'
+    '<div class="muted">Stone, dirt, sand, gravel, cobblestone and netherrack become see-through with a thin outline on cave walls, so you can see cave shapes and ores. Mossy cobblestone stays visible (dungeons).</div>'
+    '<a class="button" href="/minecraft/packs/Liquidity-XRay-Outlines.zip" download style="display:inline-block;margin-top:8px">Download Liquidity-XRay-Outlines.zip</a>'
+    '</div></div>'
+    '<div style="display:flex;gap:12px;align-items:flex-start;padding:10px;margin:10px 0;'
+    'background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:8px">'
+    '<img src="/minecraft/packs/Liquidity-XRay-Classic.png" width="64" height="64" alt="" style="image-rendering:pixelated;flex:none">'
+    '<div style="flex:1"><strong>X-Ray Classic</strong>'
+    '<div class="muted">The original style: the same blocks are fully invisible, no outlines. Only ores, spawners, lava, water and mossy cobblestone show.</div>'
+    '<a class="button" href="/minecraft/packs/Liquidity-XRay-Classic.zip" download style="display:inline-block;margin-top:8px">Download Liquidity-XRay-Classic.zip</a>'
+    '</div></div>'
+    '<p style="margin:8px 0 4px"><strong>Installing an x-ray pack</strong> (use one at a time):</p>'
+    '<ol style="margin-top:0"><li>Download it above (keep the .zip, do not unzip it).</li>'
+    '<li>In the game: <strong>Options… → Resource Packs… → Open resource pack</strong> and choose the .zip.</li>'
+    '<li>Click it under <em>Available Resource Packs</em>, then <strong>Select this resource pack</strong>, then <strong>Done</strong>.</li>'
+    '<li>To switch or turn off: click it under <em>Selected Resource Packs</em> to move it back. Old versions: click them and choose <strong>Delete this resource pack</strong>.</li></ol>'
+    '<p class="muted">Works best with Fullbright on. Tip: in the Nether or dark areas also set <strong>Video Settings → Fog: OFF</strong>.</p>'
+    '</section>'
 )
 
 # Launcher JS: no double quotes or backslashes (it is inserted into a double-quoted literal).
@@ -123,6 +134,12 @@ def main():
         if s.count(anchor) != 1:
             sys.exit('route anchor not found; nothing changed')
         s = s.replace(anchor, ROUTE + anchor)
+    if 'id="packsCard"' in s:                       # replace an older card with the current one
+        a = s.index('<section class="card" id="packsCard">')
+        b = s.index('</section>', a) + len('</section>')
+        s = s[:a] + CARD + s[b:]
+    import re as _re
+    s = _re.sub(r"    if name not in \([^)]*\):\n        abort\(404\)", "    if name not in %r:\n        abort(404)" % (PACK_FILES,), s)
     if 'id="packsCard"' not in s:
         marker = '<section id="guideCard" class="card">'
         if s.count(marker) != 1:
