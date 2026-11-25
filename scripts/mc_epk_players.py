@@ -73,7 +73,7 @@ def main():
         sys.exit(__doc__)
     files = read_epk(sys.argv[1])
     players = {k: v for k, v in files.items()
-               if k.endswith('.dat') and ('playerdata/' in k or 'players/' in k)}
+               if k.endswith('.dat') and k.split('/')[0] in ('player', 'players', 'playerdata')}  # Eaglercraft: player/<name>.dat
     print('Player files in the EPK:')
     for k, v in sorted(players.items()):
         print('  %-70s %d bytes' % (k, len(v)))
@@ -96,13 +96,17 @@ def main():
 
     if not DRY: subprocess.run(['systemctl', 'stop', 'minecraft'], check=True)
     dst = os.path.join(SRV, 'world', 'playerdata'); os.makedirs(dst, exist_ok=True)
+    sdir = os.path.join(SRV, 'world', 'stats'); os.makedirs(sdir, exist_ok=True)
     for name, (u, data, src) in wanted.items():
+        st = [k for k in files if k.split('/')[0] == 'stats' and os.path.basename(k)[:-5].lower() == name.lower()]
+        if st:
+            open(os.path.join(sdir, u + '.json'), 'wb').write(files[st[0]]); print('stats  %s -> stats/%s.json' % (name, u))
         out = os.path.join(dst, u + '.dat')
         if os.path.exists(out): shutil.copy2(out, out + '.before-epk')
         open(out, 'wb').write(data)
         print('copied %s -> playerdata/%s.dat' % (name, u))
     if not DRY:
-        subprocess.run(['chown', '-R', 'minecraft:minecraft', dst], check=True)
+        subprocess.run(['chown', '-R', 'minecraft:minecraft', dst, sdir], check=True)
         subprocess.run(['systemctl', 'start', 'minecraft'], check=True)
     print('Done. They can join now with those exact usernames.')
 
