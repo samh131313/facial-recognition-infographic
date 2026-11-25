@@ -68,13 +68,41 @@ ITEMS = {  # item model -> block model it normally uses
 }
 ITEM_TEX_OVERRIDE = {'grass_normal': 'grass_side', 'mycelium': 'mycelium_side'}  # nicer icon than the particle texture
 
+FRAME = 'liquidity_xray_frame'
+W = 0.25  # line width in model pixels (16 = one block) -> 1/64 of a block
+
+
+def frame_model():
+    """Thin opaque strips around the edge of each of the 6 faces, nothing inside.
+    No transparency needed (some GPUs/Eaglercraft setups draw transparent pixels black).
+    Every strip has cullface = its face's direction, so a face's outline is skipped when
+    that side touches another solid block: only faces exposed to air get outlined."""
+    els = []
+    def strip(face, frm, to):
+        els.append({"from": frm, "to": to, "faces": {face: {"uv": [0, 0, 16, 16], "texture": "#line", "cullface": face}}})
+    # rectangles on each face plane: 4 strips each
+    for face, axis, val in (("north", 2, 0), ("south", 2, 16), ("west", 0, 0), ("east", 0, 16), ("down", 1, 0), ("up", 1, 16)):
+        other = [a for a in (0, 1, 2) if a != axis]
+        a, b = other
+        def box(a0, a1, b0, b1):
+            frm = [0, 0, 0]; to = [0, 0, 0]
+            frm[axis] = to[axis] = val
+            frm[a], to[a] = a0, a1; frm[b], to[b] = b0, b1
+            return frm, to
+        for (a0, a1, b0, b1) in ((0, 16, 0, W), (0, 16, 16 - W, 16), (0, W, W, 16 - W), (16 - W, 16, W, 16 - W)):
+            strip(face, *box(a0, a1, b0, b1))
+    return {"textures": {"line": "blocks/liquidity_xray_line", "particle": "blocks/liquidity_xray_line"},
+            "elements": els}
+
+
 def hidden(tex):
-    # Full cube drawn with a see-through texture that only has a thin border.
-    # cube_all keeps "cullface", so faces touching other solid blocks are skipped and
-    # only faces exposed to air (cave walls, floors, ceilings) show their outline.
-    # Parent-only model: Eaglercraft rejects models with both "parent" and "elements".
-    return {"parent": "block/cube_all",
-            "textures": {"all": "blocks/liquidity_xray_outline", "particle": "blocks/" + tex}}
+    # Parent-only model pointing at the shared frame (Eaglercraft: parent OR elements, not both).
+    return {"parent": "block/" + FRAME, "textures": {"particle": "blocks/" + tex}}
+
+
+def line_png():
+    im = Image.new('RGBA', (16, 16), (150, 150, 150, 255))  # fully opaque
+    b = io.BytesIO(); im.save(b, 'PNG'); return b.getvalue()
 
 
 def hidden_classic(tex):
@@ -122,7 +150,8 @@ with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED) as z:
         "description": ("X-Ray Outlines: cave walls outlined, ores visible" if MODE == "outlines" else "X-Ray Classic: filler invisible, no outlines")}}, indent=1))
     z.writestr('pack.png', icon())
     if MODE == 'outlines':
-        z.writestr('assets/minecraft/textures/blocks/liquidity_xray_outline.png', outline_png())
+        z.writestr('assets/minecraft/textures/blocks/liquidity_xray_line.png', line_png())
+        z.writestr('assets/minecraft/models/block/%s.json' % FRAME, json.dumps(frame_model()))
     for name, tex in HIDE.items():
         z.writestr('assets/minecraft/models/block/%s.json' % name, json.dumps(hidden(tex) if MODE == 'outlines' else hidden_classic(tex)))
     for item, blk in ITEMS.items():
