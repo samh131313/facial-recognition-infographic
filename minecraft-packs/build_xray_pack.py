@@ -7,8 +7,10 @@ from PIL import Image, ImageDraw
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'Liquidity-XRay.zip'
 
+# Model names checked against this game build's own blockstates (EaglercraftX 1.9.4-u35):
+# e.g. stone randomly uses 'stone' OR 'stone_mirrored', so both must be hidden.
 HIDE = {  # model name -> particle texture (keeps break particles sensible)
-    'stone': 'stone', 'granite': 'stone_granite', 'granite_smooth': 'stone_granite_smooth',
+    'stone': 'stone', 'stone_mirrored': 'stone', 'granite': 'stone_granite', 'granite_smooth': 'stone_granite_smooth',
     'diorite': 'stone_diorite', 'diorite_smooth': 'stone_diorite_smooth',
     'andesite': 'stone_andesite', 'andesite_smooth': 'stone_andesite_smooth',
     'dirt': 'dirt', 'coarse_dirt': 'coarse_dirt', 'podzol': 'dirt_podzol_side',
@@ -16,6 +18,8 @@ HIDE = {  # model name -> particle texture (keeps break particles sensible)
     'gravel': 'gravel', 'sand': 'sand', 'red_sand': 'red_sand',
     'sandstone_normal': 'sandstone_normal', 'sandstone_smooth': 'sandstone_smooth',
     'sandstone_chiseled': 'sandstone_carved',
+    'red_sandstone_normal': 'red_sandstone_normal', 'red_sandstone_smooth': 'red_sandstone_smooth',
+    'red_sandstone_chiseled': 'red_sandstone_carved',
     'netherrack': 'netherrack', 'end_stone': 'end_stone', 'soul_sand': 'soul_sand',
     'clay': 'clay', 'hardened_clay': 'hardened_clay',
 }
