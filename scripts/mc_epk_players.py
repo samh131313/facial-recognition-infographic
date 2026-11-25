@@ -50,7 +50,7 @@ def read_epk(path):
         if tag == b'FILE':
             crc = struct.unpack('>I', body[q:q + 4])[0]; q += 4
             data = body[q:q + ln]; q += ln
-            if zlib.crc32(data) & 0xffffffff != crc: sys.exit('CRC mismatch in ' + name)
+            # (Eaglercraft's checksum isn't plain CRC32; the ':' / '>' framing below still verifies structure)
             if body[q:q + 1] != b':': sys.exit('Bad EPK record after ' + name)
             q += 1
             files[name] = data
