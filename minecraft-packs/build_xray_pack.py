@@ -8,6 +8,9 @@ from PIL import Image, ImageDraw
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'Liquidity-XRay-Outlines.zip'
 MODE = sys.argv[2] if len(sys.argv) > 2 else 'outlines'   # 'outlines' or 'classic'
 assert MODE in ('outlines', 'classic')
+GAME = sys.argv[3] if len(sys.argv) > 3 else '1.9'   # '1.9' (pack_format 1) or '1.12' (pack_format 3)
+assert GAME in ('1.9', '1.12')
+PACK_FORMAT = 3 if GAME == '1.12' else 1
 
 # Model names checked against this game build's own blockstates (EaglercraftX 1.9.4-u35):
 # e.g. stone randomly uses 'stone' OR 'stone_mirrored', so both must be hidden.
@@ -140,14 +143,16 @@ def icon():
             d.line([(k, 0), (k, 63)], fill=(150, 150, 150, 255)); d.line([(0, k), (63, k)], fill=(150, 150, 150, 255))
     for (x, y, c) in [(10, 12, (90, 220, 255)), (36, 30, (60, 200, 90)), (16, 40, (230, 190, 60)), (40, 8, (220, 60, 60))]:
         d.rectangle([x, y, x + 13, y + 13], fill=c + (255,), outline=(255, 255, 255, 255))
+    if GAME == '1.12':  # version badge so the two sets are easy to tell apart
+        d.rectangle([38, 0, 63, 11], fill=(30, 120, 220, 255)); d.text((40, 0), "1.12", fill=(255, 255, 255, 255))
     d.rectangle([0, 50, 63, 63], fill=(0, 0, 0, 200))
     d.text((3, 51), "OUTLINE" if MODE == 'outlines' else "CLASSIC", fill=(255, 255, 255, 255))
     b = io.BytesIO(); im.save(b, 'PNG'); return b.getvalue()
 
 
 with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED) as z:
-    z.writestr('pack.mcmeta', json.dumps({"pack": {"pack_format": 1,
-        "description": ("X-Ray Outlines: cave walls outlined, ores visible" if MODE == "outlines" else "X-Ray Classic: filler invisible, no outlines")}}, indent=1))
+    z.writestr('pack.mcmeta', json.dumps({"pack": {"pack_format": PACK_FORMAT,
+        "description": ("X-Ray Outlines: cave walls outlined, ores visible" if MODE == "outlines" else "X-Ray Classic: filler invisible, no outlines") + (" (1.12)" if GAME == "1.12" else "")}}, indent=1))
     z.writestr('pack.png', icon())
     if MODE == 'outlines':
         z.writestr('assets/minecraft/textures/blocks/liquidity_xray_line.png', line_png())
