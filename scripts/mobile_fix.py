@@ -5,6 +5,8 @@
 * Apps get a menu button to reopen the sidebar; tapping outside the sidebar closes it.
 * No iOS auto-zoom when tapping text boxes (16px inputs), notch/home-bar safe areas,
   bigger tap targets, no rubber-band bounce.
+* Message toolbars (reply/react/edit) stay hidden until you tap a message.
+* Online/away/offline dots on profile pictures next to messages.
 Run inside the app container:  python /tmp/mobile_fix.py   then: docker restart liquidity_web
 Safe to re-run (replaces its own block). Backup: flask_app.py.bak-mobile
 """
@@ -30,6 +32,8 @@ BLOCK = (
     '.composer{padding-bottom:max(12px,env(safe-area-inset-bottom))}'
     '.rail{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}'
     'a.row{min-height:42px;align-items:center}'
+    '.message-actions{display:none!important}'
+    '.msg.liq-tap .message-actions{display:flex!important}'
     '}</style>'
     '<script>(function(){var mq=window.matchMedia("(max-width:800px)");var sub=document.getElementById("subapp");'
     'if(!sub)return;var app=document.querySelector(".app");'
@@ -40,6 +44,16 @@ BLOCK = (
     'var bar=sub.querySelector(".bar");if(bar&&!document.getElementById("liqSubMenu")){var b=document.createElement("button");'
     'b.id="liqSubMenu";b.type="button";b.setAttribute("aria-label","Open menu");b.textContent="☰";'
     'b.onclick=function(e){e.stopPropagation();if(app)app.dataset.rail="open"};bar.insertBefore(b,bar.firstChild)}'
+    'document.addEventListener("click",function(e){if(!mq.matches)return;var t=e.target;'
+    'if(t.closest(".message-actions")||t.closest("a,button,img,video,input,textarea,summary"))return;'
+    'var m=t.closest(".msg");var was=m&&m.classList.contains("liq-tap");'
+    'document.querySelectorAll(".msg.liq-tap").forEach(function(x){x.classList.remove("liq-tap")});'
+    'if(m&&!was)m.classList.add("liq-tap")});'
+    'function dots(){if(!mq.matches)return;var map={};'
+    'document.querySelectorAll(".person .avatar[data-presence]").forEach(function(a){var n=(a.title||"").split(" · ")[0].trim();if(n)map[n.toLowerCase()]=a.dataset.presence});'
+    'document.querySelectorAll(".msg").forEach(function(m){var au=m.querySelector(".msg__author");var av=m.querySelector(".avatar");'
+    'if(!au||!av)return;var pr=map[(au.textContent||"").trim().toLowerCase()];if(pr&&av.dataset.presence!==pr)av.dataset.presence=pr})}'
+    'dots();setInterval(dots,4000);'
     '})();</script><!--/liq-mobile-->'
 )
 
