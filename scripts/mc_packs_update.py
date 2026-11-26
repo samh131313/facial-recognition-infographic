@@ -139,7 +139,7 @@ def main():
         b = s.index('</section>', a) + len('</section>')
         s = s[:a] + CARD + s[b:]
     import re as _re
-    s = _re.sub(r"    if name not in \([^)]*\):\n        abort\(404\)", "    if name not in %r:\n        abort(404)" % (PACK_FILES,), s)
+    s = _re.sub(r"    if name not in \([^)]*\):\n        abort\(404\)", "    if name not in %r:\n        abort(404)" % (tuple(sorted(set(PACK_FILES) | ({f for f in __import__('os').listdir(SITE + '/minecraft_game/packs') if f.endswith(('.zip', '.png'))} if __import__('os').path.isdir(SITE + '/minecraft_game/packs') else set()))),), s)
     if 'id="packsCard"' not in s:
         marker = '<section id="guideCard" class="card">'
         if s.count(marker) != 1:

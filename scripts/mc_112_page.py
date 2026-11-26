@@ -52,8 +52,12 @@ def main():
         s = s[:i] + 'MINECRAFT_LAUNCHER = ' + repr(L) + s[j:]
 
     # 2) pack download whitelist: add the 1.12 packs
+    import os as _os
+    present = {f for f in _os.listdir(SITE + '/minecraft_game/packs') if f.endswith(('.zip', '.png'))} \
+        if _os.path.isdir(SITE + '/minecraft_game/packs') else set()
+    allowed = tuple(sorted(set(FILES) | present))
     s = re.sub(r"    if name not in \([^)]*\):\n        abort\(404\)",
-               "    if name not in %r:\n        abort(404)" % (FILES,), s, count=1)
+               "    if name not in %r:\n        abort(404)" % (allowed,), s, count=1)
 
     # 3) build the 1.12 page + launcher from the (now renamed) 1.9.4 ones
     _, _, P = const(s, 'MINECRAFT_PAGE')
@@ -68,7 +72,7 @@ def main():
             ('Download Liquidity-XRay-Classic.zip', 'Download Liquidity-XRay-Classic-1.12.zip'),
             ('<strong>Options… → Resource Packs… → Open resource pack</strong>',
              '<strong>Options… → Resource Packs… → Open Resource Pack Folder</strong>')]
-    P2 = P
+    P2 = re.sub(r'<!--extra-packs-->.*?<!--/extra-packs-->', '', P, flags=re.S)  # re-added per version by mc_extra_packs.py
     for a, b in reps:
         need(a in P2, 'Expected text not found on the Minecraft page: %r.' % a[:60])
         P2 = P2.replace(a, b)
@@ -121,6 +125,7 @@ def minecraft_112_launcher():
     py_compile.compile(APP + '.tmp', doraise=True)
     shutil.move(APP + '.tmp', APP)
     print('added /minecraft-1.12 page; renamed 1.9.4; Fullbright pinned per version; Your apps links updated')
+    print('(if you use the extra packs, run mc_extra_packs.py again afterwards)')
 
 
 if __name__ == '__main__':
