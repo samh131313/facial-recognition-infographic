@@ -124,9 +124,16 @@ def outline_png():
     b = io.BytesIO(); im.save(b, 'PNG'); return b.getvalue()
 
 
-# Same hand-held/third-person placement as vanilla 1.8 block/block (no parent allowed with elements)
-DISPLAY = {"thirdperson": {"rotation": [10, -45, 170], "translation": [0, 1.5, -2.75],
-                           "scale": [0.375, 0.375, 0.375]}}
+# Copy of vanilla 1.9-1.12 block/block display (no parent allowed with elements). Without the
+# gui/ground/firstperson entries the ore items rendered full-size: giant drops, odd inventory icons.
+DISPLAY = {
+    "gui": {"rotation": [30, 225, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625]},
+    "ground": {"rotation": [0, 0, 0], "translation": [0, 3, 0], "scale": [0.25, 0.25, 0.25]},
+    "fixed": {"rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.5, 0.5, 0.5]},
+    "thirdperson_righthand": {"rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.375, 0.375, 0.375]},
+    "firstperson_righthand": {"rotation": [0, 45, 0], "translation": [0, 0, 0], "scale": [0.40, 0.40, 0.40]},
+    "firstperson_lefthand": {"rotation": [0, 225, 0], "translation": [0, 0, 0], "scale": [0.40, 0.40, 0.40]},
+}
 
 def visible(tex):
     face = {"uv": [0, 0, 16, 16], "texture": "#all"}  # no "cullface": always drawn
