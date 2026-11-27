@@ -47,7 +47,10 @@ ITEMS=()
 for p in world world_nether world_the_end plugins usercache.json ops.json whitelist.json banned-players.json banned-ips.json; do
   [ -e "$p" ] && ITEMS+=("$p")
 done
-tar czf "$OUT/world-$(date +%F-%H%M).tgz" --exclude='plugins/*.jar' --exclude='*/logs' "${ITEMS[@]}"
+# The server keeps running, so tar may say "file changed as we read it" (exit 1): that is fine.
+rc=0
+tar czf "$OUT/world-$(date +%F-%H%M).tgz" --warning=no-file-changed --exclude='plugins/*.jar' --exclude='*/logs' "${ITEMS[@]}" || rc=$?
+if [ "$rc" -gt 1 ]; then echo "backup failed (tar exit $rc)"; exit "$rc"; fi
 ls -1t "$OUT"/world-*.tgz | tail -n +8 | while read -r old; do rm -f -- "$old"; done
 ls -lh "$OUT"
 EOF
